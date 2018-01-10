@@ -12,7 +12,7 @@ type graphGob struct {
 	Edges    map[string]map[string]int
 }
 
-// adds a key - vertex pair to the graphGob
+// add a key - vertex pair to the graphGob
 func (g graphGob) add(v *Vertex) {
 	// set the key - vertex pair
 	g.Vertexes[v.key] = v.value
@@ -26,7 +26,7 @@ func (g graphGob) add(v *Vertex) {
 	}
 }
 
-// Encodes the graph into a []byte. With this method, graph implements the gob.GobEncoder interface.
+// GobEncode encodes the graph into a []byte. With this method, graph implements the gob.GobEncoder interface.
 func (g *Graph) GobEncode() ([]byte, error) {
 	// build inverted map
 	inv := map[*Vertex]string{}
@@ -51,7 +51,7 @@ func (g *Graph) GobEncode() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-// Decodes a []byte into the graphs vertexes and edges. With this method, graph implements the gob.GobDecoder interface.
+// GobDecode eecodes a []byte into the graphs vertexes and edges. With this method, graph implements the gob.GobDecoder interface.
 func (g *Graph) GobDecode(b []byte) (err error) {
 	// decode into graphGob
 	gGob := &graphGob{}

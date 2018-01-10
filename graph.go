@@ -7,6 +7,7 @@ import (
 	"sync"
 )
 
+// Vertex reprsents a vertex in a graph
 type Vertex struct {
 	key       string
 	value     interface{}     // the stored value
@@ -14,7 +15,7 @@ type Vertex struct {
 	sync.RWMutex
 }
 
-// Returns the map of neighbors.
+// GetNeighbors returns the map of neighbors.
 func (v *Vertex) GetNeighbors() map[*Vertex]int {
 	if v == nil {
 		return nil
@@ -27,7 +28,7 @@ func (v *Vertex) GetNeighbors() map[*Vertex]int {
 	return neighbors
 }
 
-// Returns the vertexes key.
+// Key returns the vertexes key.
 func (v *Vertex) Key() string {
 	if v == nil {
 		return ""
@@ -40,7 +41,7 @@ func (v *Vertex) Key() string {
 	return key
 }
 
-// Returns the Vertexes value.
+// Value returns the Vertexes value.
 func (v *Vertex) Value() interface{} {
 	if v == nil {
 		return nil
@@ -53,22 +54,24 @@ func (v *Vertex) Value() interface{} {
 	return value
 }
 
+// Graph reprsents a structure containing multiple interconnected vertices
 type Graph struct {
 	vertexes map[string]*Vertex // A map of all the vertexes in this graph, indexed by their key.
 	sync.RWMutex
 }
 
-// Initializes a new graph.
+// New initializes a new graph.
 func New() *Graph {
 	return &Graph{map[string]*Vertex{}, sync.RWMutex{}}
 }
 
-// Returns the amount of vertexes contained in the graph.
+// Len returns the amount of vertexes contained in the graph.
 func (g *Graph) Len() int {
 	return len(g.vertexes)
 }
 
-// If there is no vertex with the specified key yet, Set creates a new vertex and stores the value. Else, Set updates the value, but leaves all connections intact.
+// Set creates a new vertex and stores the given value if there is no vertex with the specified key yet.
+// Otherwise, it updates the value, but leaves all connections intact.
 func (g *Graph) Set(key string, value interface{}) {
 	// lock graph until this method is finished to prevent changes made by other goroutines
 	g.Lock()
@@ -93,7 +96,7 @@ func (g *Graph) Set(key string, value interface{}) {
 	v.Unlock()
 }
 
-// Deletes the vertex with the specified key. Returns false if key is invalid.
+// Delete the vertex with the specified key. Return false if key is invalid.
 func (g *Graph) Delete(key string) bool {
 	// lock graph until this method is finished to prevent changes made by other goroutines while this one is looping etc.
 	g.Lock()
@@ -106,7 +109,7 @@ func (g *Graph) Delete(key string) bool {
 	}
 
 	// iterate over neighbors, remove edges from neighboring vertexes
-	for neighbor, _ := range v.neighbors {
+	for neighbor := range v.neighbors {
 		// delete edge to the to-be-deleted vertex
 		neighbor.Lock()
 		delete(neighbor.neighbors, v)
@@ -119,7 +122,7 @@ func (g *Graph) Delete(key string) bool {
 	return true
 }
 
-// Returns a slice containing all vertexes. The slice is empty if the graph contains no nodes.
+// GetAll returns a slice containing all vertexes. The slice is empty if the graph contains no nodes.
 func (g *Graph) GetAll() (all []*Vertex) {
 	g.RLock()
 	for _, v := range g.vertexes {
@@ -130,7 +133,7 @@ func (g *Graph) GetAll() (all []*Vertex) {
 	return
 }
 
-// Returns the vertex with this key, or nil and an error if there is no vertex with this key.
+// Get returns the vertex with this key, or nil and an error if there is no vertex with this key.
 func (g *Graph) Get(key string) (v *Vertex, err error) {
 	g.RLock()
 	v = g.get(key)
@@ -143,12 +146,12 @@ func (g *Graph) Get(key string) (v *Vertex, err error) {
 	return
 }
 
-// Internal function, does NOT lock the graph, should only be used in between RLock() and RUnlock() (or Lock() and Unlock()).
+// get is an internal function, does NOT lock the graph, should only be used in between RLock() and RUnlock() (or Lock() and Unlock()).
 func (g *Graph) get(key string) *Vertex {
 	return g.vertexes[key]
 }
 
-// Creates an edge between the vertexes specified by the keys. Returns false if one or both of the keys are invalid or if they are the same.
+// Connect creates an edge between the vertexes specified by the keys. Returns false if one or both of the keys are invalid or if they are the same.
 // If there already is a connection, it is overwritten with the new edge weight.
 func (g *Graph) Connect(key string, otherKey string, weight int) bool {
 	// recursive edges are forbidden
@@ -182,7 +185,7 @@ func (g *Graph) Connect(key string, otherKey string, weight int) bool {
 	return true
 }
 
-// Removes an edge connecting the two vertexes. Returns false if one or both of the keys are invalid or if they are the same.
+// Disconnect removes an edge connecting the two vertexes. Returns false if one or both of the keys are invalid or if they are the same.
 func (g *Graph) Disconnect(key string, otherKey string) bool {
 	// recursive edges are forbidden
 	if key == otherKey {
@@ -214,7 +217,8 @@ func (g *Graph) Disconnect(key string, otherKey string) bool {
 	return true
 }
 
-// Returns true and the edge weight if there is an edge between the vertexes specified by their keys. Returns false if one or both keys are invalid, if they are the same, or if there is no edge between the vertexes.
+// Adjacent returns true and the edge weight if there is an edge between the vertexes specified by their keys.
+// Returns false if one or both keys are invalid, if they are the same, or if there is no edge between the vertexes.
 func (g *Graph) Adjacent(key string, otherKey string) (exists bool, weight int) {
 	// sanity check
 	if key == otherKey {
@@ -239,8 +243,8 @@ func (g *Graph) Adjacent(key string, otherKey string) (exists bool, weight int) 
 
 	v.RLock()
 	defer v.RUnlock()
-	otherV.RUnlock()
-	defer otherV.RLock()
+	otherV.RLock()
+	defer otherV.RUnlock()
 
 	// choose vertex with less edges (easier to find 1 in 10 than to find 1 in 100)
 	if len(v.neighbors) < len(otherV.neighbors) {

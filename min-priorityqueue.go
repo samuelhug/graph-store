@@ -1,6 +1,6 @@
 package graph
 
-// An Item is something we manage in a priority queue.
+// Item is something we manage in a priority queue.
 type Item struct {
 	v                 *Vertex // vertex this meta data belongs to
 	prev              *Vertex // previous waypoint in the shortest path from start to here
@@ -9,7 +9,7 @@ type Item struct {
 	index             int     // The index of the item in the heap. You do not need to set this, it's done automatically in Push(). DO NOT CHANGE!
 }
 
-// A priorityQueue implements heap.Interface and holds Items.
+// priorityQueue implements heap.Interface and holds Items.
 type priorityQueue []*Item
 
 func (pq priorityQueue) Len() int { return len(pq) }
