@@ -1,25 +1,25 @@
-# Graph <a href="http://goci.me/project/github.com/sauerbraten/graph"><img src="http://goci.me/project/image/github.com/sauerbraten/graph" /></a>
+# Graph
 
-A thread-safe implementation of a graph data structure in Go. See https://en.wikipedia.org/wiki/Graph_(abstract_data_type) for more information. This implementation is weighted, but undirected.
+A thread-safe implementation of a graph data structure in Go. See https://en.wikipedia.org/wiki/Graph_(abstract_data_type) for more information. This implementation is weighted, and directed.
 
-This package supports values stored in the graph's vertexes. There is a slimmer version of this package at https://github.com/sauerbraten/graph.
+This project was forked from https://github.com/sauerbraten/graph-store and modified to use a directed graph structure.
 
 ## Usage
 
 Get the package:
 
-	$ go get github.com/sauerbraten/graph-store
+	$ go get github.com/samuelhug/graph-store
 
 Import the package:
 
 	import (
-		graph "github.com/sauerbraten/graph-store"
+		graph "github.com/samuelhug/graph-store"
 	)
 
 
 ## Documentation
 
-For full package documentation, visit http://godoc.org/github.com/sauerbraten/graph-store.
+For full package documentation, visit http://godoc.org/github.com/samuelhug/graph-store.
 
 
 ## License

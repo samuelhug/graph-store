@@ -8,19 +8,19 @@ import (
 
 type graphGob struct {
 	inv      map[*Vertex]string
-	Vertexes map[string]interface{}
+	Vertices map[string]interface{}
 	Edges    map[string]map[string]int
 }
 
 // add a key - vertex pair to the graphGob
 func (g graphGob) add(v *Vertex) {
 	// set the key - vertex pair
-	g.Vertexes[v.key] = v.value
+	g.Vertices[v.key] = v.value
 
 	g.Edges[v.key] = map[string]int{}
 
-	// for each neighbor...
-	for neighbor, weight := range v.neighbors {
+	// for each outgoing edge...
+	for neighbor, weight := range v.outgoingEdges {
 		// save the edge connection to the neighbor into the edges map
 		g.Edges[v.key][neighbor.key] = weight
 	}
@@ -30,7 +30,7 @@ func (g graphGob) add(v *Vertex) {
 func (g *Graph) GobEncode() ([]byte, error) {
 	// build inverted map
 	inv := map[*Vertex]string{}
-	for key, v := range g.vertexes {
+	for key, v := range g.vertices {
 		if _, ok := inv[v]; !ok {
 			inv[v] = key
 		}
@@ -38,8 +38,8 @@ func (g *Graph) GobEncode() ([]byte, error) {
 
 	gGob := graphGob{inv, map[string]interface{}{}, map[string]map[string]int{}}
 
-	// add vertexes and edges to gGob
-	for _, v := range g.vertexes {
+	// add vertices and edges to gGob
+	for _, v := range g.vertices {
 		gGob.add(v)
 	}
 
@@ -51,7 +51,7 @@ func (g *Graph) GobEncode() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-// GobDecode eecodes a []byte into the graphs vertexes and edges. With this method, graph implements the gob.GobDecoder interface.
+// GobDecode eecodes a []byte into the graph's vertices and edges. With this method, graph implements the gob.GobDecoder interface.
 func (g *Graph) GobDecode(b []byte) (err error) {
 	// decode into graphGob
 	gGob := &graphGob{}
@@ -63,12 +63,12 @@ func (g *Graph) GobDecode(b []byte) (err error) {
 		return
 	}
 
-	// set the vertexes
-	for key, value := range gGob.Vertexes {
+	// set the vertices
+	for key, value := range gGob.Vertices {
 		g.Set(key, value)
 	}
 
-	// connect the vertexes
+	// connect the vertices
 	for key, neighbors := range gGob.Edges {
 		for otherKey, weight := range neighbors {
 			if ok := g.Connect(key, otherKey, weight); !ok {

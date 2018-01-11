@@ -10,7 +10,7 @@ import (
 func TestConnect(t *testing.T) {
 	g := New()
 
-	// set some vertexes
+	// set some vertices
 	g.Set("1", 123)
 	g.Set("2", 678)
 	g.Set("3", "abc")
@@ -22,12 +22,12 @@ func TestConnect(t *testing.T) {
 		t.Fail()
 	}
 
-	ok = g.Connect("1", "3", 1)
+	ok = g.Connect("2", "3", 1)
 	if !ok {
 		t.Fail()
 	}
 
-	ok = g.Connect("2", "3", 9)
+	ok = g.Connect("3", "1", 9)
 	if !ok {
 		t.Fail()
 	}
@@ -38,28 +38,49 @@ func TestConnect(t *testing.T) {
 	}
 
 	// test connections
-	ok, weight := g.Adjacent("1", "2")
+	ok, weight := g.IsConnected("1", "2")
 	if !ok || weight != 5 {
 		t.Fail()
 	}
 
-	ok, weight = g.Adjacent("1", "3")
+	ok, weight = g.IsConnected("2", "3")
 	if !ok || weight != 1 {
 		t.Fail()
 	}
 
-	ok, weight = g.Adjacent("2", "3")
+	ok, weight = g.IsConnected("3", "1")
 	if !ok || weight != 9 {
 		t.Fail()
 	}
 
-	ok, weight = g.Adjacent("4", "2")
+	ok, weight = g.IsConnected("4", "2")
 	if !ok || weight != 3 {
 		t.Fail()
 	}
 
+	// test connections in the reverse (shouldn't work)
+	ok, _ = g.IsConnected("2", "1")
+	if ok {
+		t.Fail()
+	}
+
+	ok, _ = g.IsConnected("3", "3")
+	if ok {
+		t.Fail()
+	}
+
+	ok, _ = g.IsConnected("1", "3")
+	if ok {
+		t.Fail()
+	}
+
+	ok, _ = g.IsConnected("2", "4")
+	if ok {
+		t.Fail()
+	}
+
 	// test non-connections
-	ok, _ = g.Adjacent("1", "4")
+	ok, _ = g.IsConnected("1", "4")
 	if ok {
 		t.Fail()
 	}
@@ -68,7 +89,7 @@ func TestConnect(t *testing.T) {
 func TestDelete(t *testing.T) {
 	g := New()
 
-	// set some vertexes
+	// set some vertices
 	g.Set("1", 123)
 	g.Set("2", 678)
 	g.Set("3", "abc")
@@ -80,12 +101,12 @@ func TestDelete(t *testing.T) {
 		t.Fail()
 	}
 
-	ok = g.Connect("1", "3", 1)
+	ok = g.Connect("2", "3", 1)
 	if !ok {
 		t.Fail()
 	}
 
-	ok = g.Connect("2", "3", 9)
+	ok = g.Connect("3", "1", 9)
 	if !ok {
 		t.Fail()
 	}
@@ -114,14 +135,14 @@ func TestDelete(t *testing.T) {
 	}
 
 	// test for orphaned connections
-	neighbors := g.get("2").GetNeighbors()
+	neighbors := g.get("2").GetIncoming()
 	for n := range neighbors {
 		if n == one {
 			t.Fail()
 		}
 	}
 
-	neighbors = g.get("3").GetNeighbors()
+	neighbors = g.get("3").GetOutgoing()
 	for n := range neighbors {
 		if n == one {
 			t.Fail()
@@ -138,7 +159,7 @@ func TestGob(t *testing.T) {
 	g.Set("3", "abc")
 	g.Set("4", "xyz")
 
-	// connect vertexes/nodes
+	// connect vertices/nodes
 	g.Connect("1", "2", 5)
 	g.Connect("1", "3", 1)
 	g.Connect("2", "3", 9)
@@ -162,12 +183,12 @@ func TestGob(t *testing.T) {
 	}
 
 	// validate length of new graph
-	if len(g.vertexes) != len(newG.vertexes) {
+	if len(g.vertices) != len(newG.vertices) {
 		t.Fail()
 	}
 
 	// validate contents of new graph
-	for k, v := range g.vertexes {
+	for k, v := range g.vertices {
 		if newV := newG.get(k); newV.value != v.value {
 			t.Fail()
 		}
@@ -183,10 +204,10 @@ func ExampleGraph() {
 	g.Set("3", "abc")
 	g.Set("4", "xyz")
 
-	// connect vertexes/nodes
+	// connect vertices/nodes
 	g.Connect("1", "2", 5)
-	g.Connect("1", "3", 1)
-	g.Connect("2", "3", 9)
+	g.Connect("2", "3", 1)
+	g.Connect("3", "1", 9)
 	g.Connect("4", "2", 3)
 
 	// delete a node, and all connections to it
@@ -210,11 +231,14 @@ func ExampleGraph() {
 	}
 }
 
-func printVertexes(vSlice map[string]*Vertex) {
+func printVertices(vSlice map[string]*Vertex) {
 	for _, v := range vSlice {
 		fmt.Printf("%v\n", v.value)
-		for otherV := range v.neighbors {
+		for otherV := range v.outgoingEdges {
 			fmt.Printf("  → %v\n", otherV.value)
+		}
+		for otherV := range v.incomingEdges {
+			fmt.Printf("  ← %v\n", otherV.value)
 		}
 	}
 }

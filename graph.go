@@ -1,4 +1,4 @@
-// Package graph implements a weighted, undirected graph data structure.
+// Package graph implements a weighted, directed graph data structure.
 // See https://en.wikipedia.org/wiki/Graph_(abstract_data_type) for more information.
 package graph
 
@@ -9,26 +9,40 @@ import (
 
 // Vertex reprsents a vertex in a graph
 type Vertex struct {
-	key       string
-	value     interface{}     // the stored value
-	neighbors map[*Vertex]int // maps the neighbor node to the weight of the connection to it
+	key           string
+	value         interface{}     // the stored value
+	incomingEdges map[*Vertex]int // maps the incoming edge to its weight
+	outgoingEdges map[*Vertex]int // maps the outgoing edge to its weight
 	sync.RWMutex
 }
 
-// GetNeighbors returns the map of neighbors.
-func (v *Vertex) GetNeighbors() map[*Vertex]int {
+// GetIncoming returns the map of incoming edges and their weights.
+func (v *Vertex) GetIncoming() map[*Vertex]int {
 	if v == nil {
 		return nil
 	}
 
 	v.RLock()
-	neighbors := v.neighbors
+	incomingEdges := v.incomingEdges
 	v.RUnlock()
 
-	return neighbors
+	return incomingEdges
 }
 
-// Key returns the vertexes key.
+// GetOutgoing returns the map of outgoing edges and their weights.
+func (v *Vertex) GetOutgoing() map[*Vertex]int {
+	if v == nil {
+		return nil
+	}
+
+	v.RLock()
+	outgoingEdges := v.outgoingEdges
+	v.RUnlock()
+
+	return outgoingEdges
+}
+
+// Key returns the Vertex's key.
 func (v *Vertex) Key() string {
 	if v == nil {
 		return ""
@@ -41,7 +55,7 @@ func (v *Vertex) Key() string {
 	return key
 }
 
-// Value returns the Vertexes value.
+// Value returns the Vertex's value.
 func (v *Vertex) Value() interface{} {
 	if v == nil {
 		return nil
@@ -56,7 +70,7 @@ func (v *Vertex) Value() interface{} {
 
 // Graph reprsents a structure containing multiple interconnected vertices
 type Graph struct {
-	vertexes map[string]*Vertex // A map of all the vertexes in this graph, indexed by their key.
+	vertices map[string]*Vertex // A map of all the vertices in this graph, indexed by their key.
 	sync.RWMutex
 }
 
@@ -65,9 +79,9 @@ func New() *Graph {
 	return &Graph{map[string]*Vertex{}, sync.RWMutex{}}
 }
 
-// Len returns the amount of vertexes contained in the graph.
+// Len returns the number of vertices contained in the graph.
 func (g *Graph) Len() int {
-	return len(g.vertexes)
+	return len(g.vertices)
 }
 
 // Set creates a new vertex and stores the given value if there is no vertex with the specified key yet.
@@ -82,10 +96,10 @@ func (g *Graph) Set(key string, value interface{}) {
 	// if no such node exists
 	if v == nil {
 		// create a new one
-		v = &Vertex{key, value, map[*Vertex]int{}, sync.RWMutex{}}
+		v = &Vertex{key, value, map[*Vertex]int{}, map[*Vertex]int{}, sync.RWMutex{}}
 
 		// and add it to the graph
-		g.vertexes[key] = v
+		g.vertices[key] = v
 
 		return
 	}
@@ -108,24 +122,32 @@ func (g *Graph) Delete(key string) bool {
 		return false
 	}
 
-	// iterate over neighbors, remove edges from neighboring vertexes
-	for neighbor := range v.neighbors {
+	// iterate over incomingEdges, remove edges from vertices
+	for neighbor := range v.incomingEdges {
 		// delete edge to the to-be-deleted vertex
 		neighbor.Lock()
-		delete(neighbor.neighbors, v)
+		delete(neighbor.outgoingEdges, v)
+		neighbor.Unlock()
+	}
+
+	// iterate over outgoingEdges, remove edges from vertices
+	for neighbor := range v.outgoingEdges {
+		// delete edge to the to-be-deleted vertex
+		neighbor.Lock()
+		delete(neighbor.incomingEdges, v)
 		neighbor.Unlock()
 	}
 
 	// delete vertex
-	delete(g.vertexes, key)
+	delete(g.vertices, key)
 
 	return true
 }
 
-// GetAll returns a slice containing all vertexes. The slice is empty if the graph contains no nodes.
+// GetAll returns a slice containing all vertices. The slice is empty if the graph contains no nodes.
 func (g *Graph) GetAll() (all []*Vertex) {
 	g.RLock()
-	for _, v := range g.vertexes {
+	for _, v := range g.vertices {
 		all = append(all, v)
 	}
 	g.RUnlock()
@@ -148,14 +170,14 @@ func (g *Graph) Get(key string) (v *Vertex, err error) {
 
 // get is an internal function, does NOT lock the graph, should only be used in between RLock() and RUnlock() (or Lock() and Unlock()).
 func (g *Graph) get(key string) *Vertex {
-	return g.vertexes[key]
+	return g.vertices[key]
 }
 
-// Connect creates an edge between the vertexes specified by the keys. Returns false if one or both of the keys are invalid or if they are the same.
+// Connect creates a directed edge between the vertices specified by fromKey and toKey. Returns false if one or both of the keys are invalid or if they are the same.
 // If there already is a connection, it is overwritten with the new edge weight.
-func (g *Graph) Connect(key string, otherKey string, weight int) bool {
+func (g *Graph) Connect(fromKey string, toKey string, weight int) bool {
 	// recursive edges are forbidden
-	if key == otherKey {
+	if fromKey == toKey {
 		return false
 	}
 
@@ -163,32 +185,32 @@ func (g *Graph) Connect(key string, otherKey string, weight int) bool {
 	g.RLock()
 	defer g.RUnlock()
 
-	// get vertexes and check for validity of keys
-	v := g.get(key)
-	otherV := g.get(otherKey)
+	// get vertices and check for validity of keys
+	fromV := g.get(fromKey)
+	toV := g.get(toKey)
 
-	if v == nil || otherV == nil {
+	if fromV == nil || toV == nil {
 		return false
 	}
 
-	// add connection to both vertexes
-	v.Lock()
-	otherV.Lock()
+	// add connection to both vertices
+	fromV.Lock()
+	toV.Lock()
 
-	v.neighbors[otherV] = weight
-	otherV.neighbors[v] = weight
+	fromV.outgoingEdges[toV] = weight
+	toV.incomingEdges[fromV] = weight
 
-	v.Unlock()
-	otherV.Unlock()
+	fromV.Unlock()
+	toV.Unlock()
 
 	// success
 	return true
 }
 
-// Disconnect removes an edge connecting the two vertexes. Returns false if one or both of the keys are invalid or if they are the same.
-func (g *Graph) Disconnect(key string, otherKey string) bool {
+// Disconnect removes an edge connecting the two vertices. Returns false if one or both of the keys are invalid or if they are the same.
+func (g *Graph) Disconnect(fromKey string, toKey string) bool {
 	// recursive edges are forbidden
-	if key == otherKey {
+	if fromKey == toKey {
 		return false
 	}
 
@@ -196,68 +218,68 @@ func (g *Graph) Disconnect(key string, otherKey string) bool {
 	g.RLock()
 	defer g.RUnlock()
 
-	// get vertexes and check for validity of keys
-	v := g.get(key)
-	otherV := g.get(otherKey)
+	// get vertices and check for validity of keys
+	fromV := g.get(fromKey)
+	toV := g.get(toKey)
 
-	if v == nil || otherV == nil {
+	if fromV == nil || toV == nil {
 		return false
 	}
 
-	// delete the edge from both vertexes
-	v.Lock()
-	otherV.Lock()
+	// delete the edge from both vertices
+	fromV.Lock()
+	toV.Lock()
 
-	delete(v.neighbors, otherV)
-	delete(otherV.neighbors, v)
+	delete(fromV.outgoingEdges, toV)
+	delete(toV.incomingEdges, fromV)
 
-	v.Unlock()
-	otherV.Unlock()
+	fromV.Unlock()
+	toV.Unlock()
 
 	return true
 }
 
-// Adjacent returns true and the edge weight if there is an edge between the vertexes specified by their keys.
-// Returns false if one or both keys are invalid, if they are the same, or if there is no edge between the vertexes.
-func (g *Graph) Adjacent(key string, otherKey string) (exists bool, weight int) {
+// IsConnected returns true and the edge weight if there is an edge from fromKey to toKey.
+// Returns false if one or both keys are invalid, if they are the same, or if there is no edge connecting them.
+func (g *Graph) IsConnected(fromKey string, toKey string) (exists bool, weight int) {
 	// sanity check
-	if key == otherKey {
+	if fromKey == toKey {
 		return
 	}
 
 	g.RLock()
 
-	v := g.get(key)
-	if v == nil {
+	fromV := g.get(fromKey)
+	if fromV == nil {
 		g.RUnlock()
 		return
 	}
 
-	otherV := g.get(otherKey)
-	if otherV == nil {
+	toV := g.get(toKey)
+	if toV == nil {
 		g.RUnlock()
 		return
 	}
 
 	g.RUnlock()
 
-	v.RLock()
-	defer v.RUnlock()
-	otherV.RLock()
-	defer otherV.RUnlock()
+	fromV.RLock()
+	defer fromV.RUnlock()
+	toV.RLock()
+	defer toV.RUnlock()
 
 	// choose vertex with less edges (easier to find 1 in 10 than to find 1 in 100)
-	if len(v.neighbors) < len(otherV.neighbors) {
+	if len(fromV.outgoingEdges) < len(toV.incomingEdges) {
 		// iterate over it's map of edges; when the right vertex is found, return
-		for iteratingV, weight := range v.neighbors {
-			if iteratingV == otherV {
+		for iteratingV, weight := range fromV.outgoingEdges {
+			if iteratingV == toV {
 				return true, weight
 			}
 		}
 	} else {
 		// iterate over it's map of edges; when the right vertex is found, return
-		for iteratingV, weight := range otherV.neighbors {
-			if iteratingV == v {
+		for iteratingV, weight := range toV.incomingEdges {
+			if iteratingV == fromV {
 				return true, weight
 			}
 		}

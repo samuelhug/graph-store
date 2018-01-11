@@ -13,16 +13,16 @@ func (g *Graph) ShortestPathWithHeuristic(startKey, endKey string, heuristic fun
 	start := g.get(startKey)
 	end := g.get(endKey)
 
-	// priorityQueue for vertexes that have not yet been visited (open vertexes)
+	// priorityQueue for vertices that have not yet been visited (open vertices)
 	openQueue := &priorityQueue{}
 
-	// priorityQueue for vertexes that have not yet been visited (open vertexes)
+	// priorityQueue for vertices that have not yet been visited (open vertices)
 	openList := map[*Vertex]*Item{}
 
-	// list for vertexes that have been visited already (closed vertexes)
+	// list for vertices that have been visited already (closed vertices)
 	closedList := map[*Vertex]*Item{}
 
-	// add start vertex to list of open vertexes
+	// add start vertex to list of open vertices
 	item := &Item{start, nil, 0, 0, 0}
 	openList[start] = item
 
@@ -52,7 +52,7 @@ func (g *Graph) ShortestPathWithHeuristic(startKey, endKey string, heuristic fun
 		// saved here for easy usage in following loop
 		distance := closedList[current].distanceFromStart
 
-		for neighbor, weight := range current.GetNeighbors() {
+		for neighbor, weight := range current.GetOutgoing() {
 			if _, ok := closedList[neighbor]; ok {
 				continue
 			}
@@ -76,7 +76,7 @@ func (g *Graph) ShortestPathWithHeuristic(startKey, endKey string, heuristic fun
 				0,
 			}
 
-			// add neighbor vertex to list of open vertexes
+			// add neighbor vertex to list of open vertices
 			openList[neighbor] = item
 
 			// push into priority queue

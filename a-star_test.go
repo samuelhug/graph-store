@@ -19,7 +19,7 @@ func TestShortestPathWithHeuristic(t *testing.T) {
 	g.Set("8", 8)
 	g.Set("9", 9)
 
-	// connect vertexes/nodes
+	// connect vertices/nodes
 	g.Connect("1", "2", 1)
 	g.Connect("1", "3", 2) // these two lines make it cheaper to go 1→3
 	g.Connect("2", "3", 2) // than 1→2→3
@@ -61,7 +61,7 @@ func TestShortestPathWithHeuristic(t *testing.T) {
 	g.Set("8", 8)
 	g.Set("9", 9)
 
-	// connect vertexes/nodes
+	// connect vertices/nodes
 	g.Connect("1", "2", 1)
 	g.Connect("1", "3", 2) // these two lines make it cheaper to go 1→3
 	g.Connect("2", "3", 2) // than 1→2→3
@@ -103,7 +103,7 @@ func ExampleShortestPathWithHeuristic() {
 	g.Set("8", 8)
 	g.Set("9", 9)
 
-	// connect vertexes/nodes
+	// connect vertices/nodes
 	g.Connect("1", "2", 1)
 	g.Connect("1", "3", 2) // these two lines make it cheaper to go 1→3
 	g.Connect("2", "3", 2) // than 1→2→3
